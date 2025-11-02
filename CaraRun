@@ -1,0 +1,50 @@
+# 🚲 Bike Sharing Analytics Dashboard
+
+Dashboard interaktif untuk menganalisis data penyewaan sepeda (*Bike Sharing Dataset*).  
+Dibangun untuk tugas akhir kelas **Belajar Analisis Data dengan Python – Dicoding**.
+
+Dashboard ini menyajikan:
+
+- 📈 Tren penyewaan harian & musiman  
+- 👥 Perbandingan pengguna *casual vs registered*  
+- ⏱️ Pola penyewaan per jam (*commute hours*)  
+- 🗓️ Pola penyewaan per hari dalam seminggu  
+- 🕓 Segmentasi waktu manual (Subuh–Malam)  
+- 🧠 Insight otomatis selaras notebook EDA  
+
+> ✅ **Data langsung dari GitHub RAW — tanpa upload file**
+
+---
+
+## 📂 Struktur Folder
+
+.
+├─ dashboard/
+│ └─ dashboard.py
+├─ data/ ← (opsional, karena data langsung dari GitHub)
+├─ notebook.ipynb
+├─ requirements.txt
+├─ url.txt
+└─ README.md
+
+
+---
+
+## ⚙️ Instalasi Environment
+
+### 🐍 Anaconda (disarankan)
+
+```bash
+conda create --name bike-ds python=3.9 -y
+conda activate bike-ds
+pip install -r requirements.txt
+
+### Terminal/Powershell
+python -m venv venv
+.\venv\Scripts\activate   # Windows
+# source venv/bin/activate   # Mac / Linux
+
+### Jalankan Dashboard
+streamlit run dashboard/dashboard.py
+
+pip install -r requirements.txt
