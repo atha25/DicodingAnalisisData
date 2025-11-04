@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 import matplotlib.dates as mdates 
 
 df_bikeday = pd.read_csv("https://raw.githubusercontent.com/atha25/DicodingAnalisisData/refs/heads/main/Dashboard/day.csv")
@@ -156,4 +155,5 @@ st.markdown("""
 
 # Footer
 st.markdown("---")
+
 st.markdown("Created by Muhammad Athaurahman")
