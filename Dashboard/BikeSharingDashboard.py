@@ -1,12 +1,13 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates 
+import matplotlib.dates as mdates
 
 df_bikeday = pd.read_csv("https://raw.githubusercontent.com/atha25/DicodingAnalisisData/refs/heads/main/Dashboard/day.csv")
 df_bikehour = pd.read_csv("https://raw.githubusercontent.com/atha25/DicodingAnalisisData/refs/heads/main/Dashboard/hour.csv")
 
 df_bikeday['dteday'] = pd.to_datetime(df_bikeday['dteday'])
+df_bikehour['dteday'] = pd.to_datetime(df_bikehour['dteday']) 
 
 def time_bin(hr):
     if hr <= 5:
@@ -39,14 +40,66 @@ st.markdown("""
 - Bagaimana jumlah penyewaan sepeda bervariasi berdasarkan musim, dan musim mana yang permintaannya paling tinggi?
 """)
 
-# Exploratory Data Analysis (EDA) 
+# Add interactive filters
+st.sidebar.header("Filter Data")
+
+min_date = df_bikeday['dteday'].min().date()
+max_date = df_bikeday['dteday'].max().date()
+
+selected_date_range = st.sidebar.slider(
+    "Select Date Range",
+    min_value=min_date,
+    max_value=max_date,
+    value=(min_date, max_date),
+    format="YYYY-MM-DD"
+)
+
+start_date = pd.to_datetime(selected_date_range[0])
+end_date = pd.to_datetime(selected_date_range[1])
+
+# Add season filter
+season_mapping = {1: "Spring", 2: "Summer", 3: "Fall", 4: "Winter"}
+selected_seasons = st.sidebar.multiselect(
+    "Select Season",
+    options=list(season_mapping.values()),
+    default=list(season_mapping.values())
+)
+selected_season_ids = [key for key, value in season_mapping.items() if value in selected_seasons]
+
+
+# Add weather condition filter
+weather_mapping = {1: "Clear/Partly Cloudy", 2: "Mist/Cloudy", 3: "Light Snow/Light Rain"}
+selected_weather = st.sidebar.multiselect(
+    "Select Weather Condition",
+    options=list(weather_mapping.values()),
+    default=list(weather_mapping.values())
+)
+selected_weather_ids = [key for key, value in weather_mapping.items() if value in selected_weather]
+
+
+# Filter data based on selections
+filtered_df_day = df_bikeday[
+    (df_bikeday['dteday'] >= start_date) &
+    (df_bikeday['dteday'] <= end_date) &
+    (df_bikeday['season'].isin(selected_season_ids)) &
+    (df_bikeday['weathersit'].isin(selected_weather_ids))
+].copy()
+
+filtered_df_hour = df_bikehour[
+    (df_bikehour['dteday'] >= start_date) &
+    (df_bikehour['dteday'] <= end_date) &
+    (df_bikehour['season'].isin(selected_season_ids)) &
+    (df_bikehour['weathersit'].isin(selected_weather_ids))
+].copy()
+
+# Exploratory Data Analysis (EDA) - Adding a header for context
 st.header('Exploratory Data Analysis (EDA)')
 
 # Pertanyaan 1: Casual vs Registered Users
 st.subheader('Daily Bike Rentals: Casual vs Registered')
 fig1, ax1 = plt.subplots(figsize=(12, 6)) 
-ax1.plot(df_bikeday['dteday'], df_bikeday['casual'], label='Casual', color='blue')
-ax1.plot(df_bikeday['dteday'], df_bikeday['registered'], label='Registered', color='orange')
+ax1.plot(filtered_df_day['dteday'], filtered_df_day['casual'], label='Casual', color='blue')
+ax1.plot(filtered_df_day['dteday'], filtered_df_day['registered'], label='Registered', color='orange')
 ax1.set_xlabel('Date')
 ax1.set_ylabel('Number of Rentals')
 ax1.set_title('Daily Bike Rentals: Casual vs Registered')
@@ -65,12 +118,12 @@ Pengguna registered secara konsisten jauh lebih tinggi daripada casual, menunjuk
 # Pertanyaan 2: Average Bike Rentals by Weekday
 st.subheader('Average Bike Rentals by Weekday')
 fig2, ax2 = plt.subplots(figsize=(8, 5))
-weekday_rentals = df_bikeday.groupby('weekday')['cnt'].mean()
+weekday_rentals = filtered_df_day.groupby('weekday')['cnt'].mean()
 ax2.bar(weekday_rentals.index, weekday_rentals.values)
-ax2.set_xlabel("Weekday (0=Sunday, 1=Monday, ..., 6=Saturday)")
+ax2.set_xlabel("Weekday")
 ax2.set_ylabel("Average Rentals")
 ax2.set_title("Average Bike Rentals by Weekday")
-plt.xticks(rotation=0)
+plt.xticks(ticks=[0, 1, 2, 3, 4, 5, 6], labels=['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], rotation=0) 
 plt.tight_layout()
 st.pyplot(fig2)
 st.markdown("""
@@ -81,8 +134,8 @@ Rata-rata penyewaan relatif tinggi dan stabil sepanjang hari kerja, dengan sedik
 # Pertanyaan 3: Average Bike Rentals by Season
 st.subheader('Average Bike Rentals by Season')
 fig3, ax3 = plt.subplots(figsize=(8, 5))
-season_rentals = df_bikeday.groupby('season')['cnt'].mean()
-ax3.bar(season_rentals.index, season_rentals.values, tick_label=["Spring", "Summer", "Fall", "Winter"])
+season_rentals = filtered_df_day.groupby('season')['cnt'].mean()
+ax3.bar(season_rentals.index, season_rentals.values, tick_label=[season_mapping[i] for i in season_rentals.index])
 ax3.set_xlabel("Season")
 ax3.set_ylabel("Average Rentals")
 ax3.set_title("Average Bike Rentals by Season")
@@ -96,13 +149,13 @@ Musim Fall (musim gugur) memiliki jumlah penyewaan tertinggi, diikuti Summer dan
 
 # Average Rentals by Weather Condition
 st.subheader('Average Bike Rentals by Weather Condition')
-average_rentals_by_weather = df_bikeday.groupby('weathersit')['cnt'].mean()
+average_rentals_by_weather = filtered_df_day.groupby('weathersit')['cnt'].mean()
 fig5, ax5 = plt.subplots(figsize=(8, 6))
 average_rentals_by_weather.plot(kind='bar', ax=ax5)
 ax5.set_title('Average Bike Rentals by Weather Condition')
-ax5.set_xlabel('Weather Condition (1: Clear/Partly Cloudy, 2: Mist/Cloudy, 3: Light Snow/Light Rain)')
+ax5.set_xlabel('Weather Condition')
 ax5.set_ylabel('Average Rentals')
-plt.xticks(rotation=0)
+plt.xticks(ticks=average_rentals_by_weather.index, labels=[weather_mapping[i] for i in average_rentals_by_weather.index], rotation=0)
 plt.tight_layout()
 st.pyplot(fig5)
 st.markdown("""
@@ -113,7 +166,7 @@ Penggunaan sepeda tertinggi terjadi pada cuaca cerah dan turun drastis saat huja
 
 # Average Bike Rentals by Time Period
 st.subheader('Average Bike Rentals by Time Period')
-average_rentals_by_time_period = df_bikehour.groupby('Time_Period')['cnt'].mean().reindex(["Dawn", "Morning", "Afternoon", "Evening", "Midnight"]) 
+average_rentals_by_time_period = filtered_df_hour.groupby('Time_Period')['cnt'].mean().reindex(["Dawn", "Morning", "Afternoon", "Evening", "Midnight"])
 fig6, ax6 = plt.subplots(figsize=(8, 6))
 average_rentals_by_time_period.plot(kind='bar', ax=ax6)
 ax6.set_title('Average Bike Rentals by Time Period')
@@ -130,7 +183,7 @@ Rata-rata penyewaan sepeda tertinggi terjadi pada waktu Sore/Malam, diikuti Sian
 
 # Optional: Hourly Bike Rental Pattern
 st.subheader('Hourly Bike Rental Pattern')
-hourly = df_bikehour.groupby('hr')['cnt'].mean()
+hourly = filtered_df_hour.groupby('hr')['cnt'].mean()
 fig4, ax4 = plt.subplots(figsize=(10, 5))
 ax4.plot(hourly.index, hourly.values, marker='o', linewidth=2)
 ax4.set_xlabel("Hour of Day (0–23)")
@@ -148,12 +201,11 @@ Rata-rata penyewaan sepeda tertinggi terjadi pada waktu Sore/Malam, diikuti Sian
 # Conclusion
 st.header('Conclusion')
 st.markdown("""
-- Berdasarkan grafik Daily Bike Rentals: Casual vs Registered, terlihat bahwa jumlah penyewaan oleh registered users secara konsisten jauh lebih tinggi daripada casual users pada hampir seluruh periode waktu. Registered users menunjukkan pola yang stabil dengan peningkatan signifikan pada hari kerja, menandakan penggunaan yang berkaitan dengan aktivitas rutin sehari-hari seperti commuting. Sementara itu, casual users cenderung meningkat pada akhir pekan, yang mengindikasikan penggunaan lebih banyak untuk keperluan rekreasi atau aktivitas santai.
+- Berdasarkan grafik Daily Bike Rentals: Casual vs Registered, terlihat bahwa jumlah penyewaan oleh registered users secara konsisten jauh lebih tinggi daripada casual users pada hampir seluruh periode waktu. Registered users menunjukkan pola yang stabil dengan peningkatan signifikan pada hari kerja, menandakan penggunaan yang berkaitan dengan aktivitas rutin sehari-hari seperti commuting. Sementara itu, casual users cenderung meningkat pada akhir pekan, mengindikasikan penggunaan lebih banyak untuk keperluan rekreasi atau aktivitas santai.
 - Grafik Average Bike Rentals by Weekday menunjukkan bahwa jumlah penyewaan relatif tinggi dan stabil sepanjang minggu, dengan sedikit peningkatan pada hari Kamis–Sabtu. Hal ini mengindikasikan bahwa penggunaan bike sharing tetap kuat sepanjang minggu, namun sedikit lebih tinggi mendekati akhir pekan, kemungkinan karena meningkatnya aktivitas rekreasi sekaligus masih kuatnya penggunaan rutin.
 - Grafik Average Bike Rentals by Season menunjukkan bahwa Fall (musim gugur) memiliki jumlah rata-rata penyewaan tertinggi, diikuti Summer, kemudian Winter, sementara Spring menjadi musim dengan penyewaan terendah. Pola ini menegaskan bahwa kondisi cuaca dan kenyamanan bersepeda memainkan peran penting dalam permintaan layanan, di mana cuaca di Fall dan Summer memberikan kondisi terbaik untuk bersepeda.
 """)
 
 # Footer
 st.markdown("---")
-
 st.markdown("Created by Muhammad Athaurahman")
